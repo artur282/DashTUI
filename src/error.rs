@@ -1,4 +1,4 @@
-//! Tipos de error personalizados para RustCLI.
+//! Tipos de error personalizados para DashTUI.
 //!
 //! Define una jerarquía de errores específicos por dominio,
 //! usando `thiserror` para implementar `Display` y `From` automáticamente.

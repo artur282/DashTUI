@@ -1,16 +1,16 @@
-# Makefile de RustCLI (herramienta de alto rendimiento)
+# Makefile de DashTUI (herramienta de alto rendimiento)
 
 .PHONY: all build check test clean run install clippy check-format doc
 
 # Directorio del target
 TARGET_DIR = target/release
-BIN_NAME = rustcli
+BIN_NAME = dashtui
 
 # Compilación default optimizada (LTO + Strip en Cargo.toml)
 all: build
 
 build:
-	@echo "🦀 Construyendo RustCLI en modo release..."
+	@echo "🦀 Construyendo DashTUI en modo release..."
 	@cargo build --release
 
 # Revisión rápida (sin compilación)
@@ -30,7 +30,7 @@ clean:
 
 # Correr proyecto local (Desarrollo)
 run:
-	@echo "🏃 Corriendo RustCLI localmente..."
+	@echo "🏃 Corriendo DashTUI localmente..."
 	@cargo run --
 
 # Linter Clippy de las best practices
@@ -50,5 +50,5 @@ doc:
 
 # Instalar tool globalmente (~/.cargo/bin)
 install:
-	@echo "📥 Instalando rustcli en el environment path..."
+	@echo "📥 Instalando dashtui en el environment path..."
 	@cargo install --path . --force

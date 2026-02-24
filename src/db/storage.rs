@@ -284,14 +284,14 @@ fn map_snippet_row(row: &rusqlite::Row) -> rusqlite::Result<Snippet> {
 /// Determina la ruta del archivo de base de datos SQLite.
 ///
 /// Usa `dirs::data_dir()` para almacenar la DB en el directorio
-/// estándar de datos del usuario (~/.local/share/rustcli/).
+/// estándar de datos del usuario (~/.local/share/dashtui/).
 fn get_database_path() -> std::result::Result<std::path::PathBuf, DatabaseError> {
     let data_dir = dirs::data_dir().ok_or(DatabaseError::NoDataDir)?;
 
-    let app_dir = data_dir.join("rustcli");
+    let app_dir = data_dir.join("dashtui");
     std::fs::create_dir_all(&app_dir)?;
 
-    Ok(app_dir.join("rustcli.db"))
+    Ok(app_dir.join("dashtui.db"))
 }
 
 #[cfg(test)]

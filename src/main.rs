@@ -1,4 +1,4 @@
-//! RustCLI — Entry point principal de la aplicación.
+//! DashTUI — Entry point principal de la aplicación.
 //!
 //! Parseo de la CLI inicial y redirección al Dashboard.
 //!

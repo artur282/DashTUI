@@ -5,12 +5,12 @@
 
 use clap::Parser;
 
-/// 🦀 RustCLI - Herramienta interactiva TUI de alto rendimiento
+/// 🦀 DashTUI - Herramienta interactiva TUI de alto rendimiento
 #[derive(Parser, Debug)]
 #[command(
-    name = "rustcli",
+    name = "dashtui",
     version,
-    about = "Dashboard TUI interactivo para desarrolladores. Launching rustcli opens the dash.",
+    about = "Dashboard TUI interactivo para desarrolladores. Launching dashtui opens the dash.",
     author = "Luis"
 )]
 pub struct Cli {

@@ -1,5 +1,5 @@
 [package]
-name = "rustcli"
+name = "dashtui"
 version = "0.1.0"
 edition = "2021"
 authors = ["Luis"]
@@ -10,7 +10,7 @@ keywords = ["cli", "developer-tools", "productivity", "tui"]
 categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
-name = "rustcli"
+name = "dashtui"
 path = "src/main.rs"
 
 [dependencies]

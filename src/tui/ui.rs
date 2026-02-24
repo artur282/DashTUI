@@ -56,7 +56,7 @@ fn render_tabs(f: &mut Frame, app: &App, area: Rect) {
     };
 
     let tabs = Tabs::new(titles)
-        .block(Block::default().borders(Borders::ALL).title(" 🦀 RustCLI "))
+        .block(Block::default().borders(Borders::ALL).title(" 🦀 DashTUI "))
         .select(tab_index)
         .style(Style::default().fg(Color::Cyan))
         .highlight_style(

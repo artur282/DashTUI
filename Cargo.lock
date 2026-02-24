@@ -347,6 +347,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashtui"
+version = "0.1.0"
+dependencies = [
+ "arboard",
+ "chrono",
+ "clap",
+ "colored",
+ "crossterm",
+ "dirs",
+ "git2",
+ "ratatui",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "toml",
+]
+
+[[package]]
 name = "dirs"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1276,26 +1296,6 @@ dependencies = [
  "hashlink",
  "libsqlite3-sys",
  "smallvec",
-]
-
-[[package]]
-name = "rustcli"
-version = "0.1.0"
-dependencies = [
- "arboard",
- "chrono",
- "clap",
- "colored",
- "crossterm",
- "dirs",
- "git2",
- "ratatui",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "toml",
 ]
 
 [[package]]
