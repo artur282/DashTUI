@@ -1,0 +1,27 @@
+# Generados por Cargo
+/target/
+**/*.rs.bk
+
+# Generados por OS
+.DS_Store
+Thumbs.db
+.spotlight-V100
+.Trashes
+
+# Editor/IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.bak
+
+# Snippets export test artifacts
+snippets.json
+
+# Test database
+test.db
+
+/.agents/ 
+.skills-lock.json
+.skills.json

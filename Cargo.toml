@@ -1,0 +1,56 @@
+[package]
+name = "rustcli"
+version = "0.1.0"
+edition = "2021"
+authors = ["Luis"]
+description = "Herramienta CLI de alto rendimiento para desarrolladores"
+license = "MIT"
+readme = "README.md"
+keywords = ["cli", "developer-tools", "productivity", "tui"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "rustcli"
+path = "src/main.rs"
+
+[dependencies]
+# Framework CLI — parsing de argumentos con derive macros
+clap = { version = "4", features = ["derive"] }
+
+# UI interactiva en terminal (TUI)
+ratatui = "0.29"
+crossterm = "0.28"
+
+# SQLite embebido para almacenamiento local de snippets
+rusqlite = { version = "0.32", features = ["bundled"] }
+
+# Serialización/deserialización (JSON/TOML)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.8"
+
+# Operaciones Git programáticas (libgit2)
+git2 = "0.19"
+
+# Clipboard cross-platform
+arboard = "3"
+
+# Error handling idiomático
+thiserror = "2"
+
+# Colores en terminal
+colored = "2"
+
+# Directorios del sistema (config, data, etc.)
+dirs = "6"
+
+# Chrono para fechas
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
