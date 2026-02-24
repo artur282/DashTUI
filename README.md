@@ -98,6 +98,14 @@ Monitor y utilidades para tu repositorio local basado en convenciones de commits
 - Visualiza el changelog basado en tus commits locales.
 - **`c`**: Limpiar ramas locales ya mergeadas.
 
+## Próximas Funcionalidades
+
+DashTUI sigue en desarrollo activo. Algunas de las características planeadas para futuras versiones incluyen:
+
+- **Más Templates**: Ampliación del catálogo de plantillas para scaffolds con más lenguajes y frameworks populares.
+- **Docker Compose**: Soporte nativo para la generación y gestión de proyectos que utilicen `docker-compose`.
+- **Compatibilidad con Skills**: Integración con las skills de [skills.sh](https://skills.sh/) para extender la potencia del TUI con scripts y herramientas personalizadas.
+
 ## Requisitos
 
 - Rust 1.83 o superior.
