@@ -10,8 +10,30 @@ DashTUI ahora es una aplicación puramente TUI-céntrica. En lugar de ofrecer su
 
 ## Instalación
 
+Puedes instalar DashTUI directamente desde el repositorio de GitHub con el siguiente comando:
+
 ```bash
-cargo install --path .
+git clone https://github.com/artur282/DashTUI.git && cd DashTUI && make install
+```
+
+O si prefieres usar `cargo` directamente:
+
+```bash
+git clone https://github.com/artur282/DashTUI.git && cd DashTUI && cargo install --path .
+```
+
+## Desinstalación
+
+Para desinstalar DashTUI de tu sistema, puedes usar el Makefile (si estás en el directorio del proyecto):
+
+```bash
+make uninstall
+```
+
+O usar `cargo` directamente desde cualquier lugar:
+
+```bash
+cargo uninstall dashtui
 ```
 
 ## Uso

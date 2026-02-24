@@ -1,6 +1,6 @@
 # Makefile de DashTUI (herramienta de alto rendimiento)
 
-.PHONY: all build check test clean run install clippy check-format doc
+.PHONY: all build check test clean run install uninstall clippy check-format doc
 
 # Directorio del target
 TARGET_DIR = target/release
@@ -52,3 +52,8 @@ doc:
 install:
 	@echo "📥 Instalando dashtui en el environment path..."
 	@cargo install --path . --force
+
+# Desinstalar tool
+uninstall:
+	@echo "🗑️  Desinstalando dashtui..."
+	@cargo uninstall dashtui
