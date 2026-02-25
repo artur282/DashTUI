@@ -1,117 +1,109 @@
-# DashTUI
+# 🦀 DashTUI
 
-![Crates.io MSRV](https://img.shields.io/crates/msrv/dashtui) ![Build Status](https://img.shields.io/github/actions/workflow/status/yourusername/dashtui/rust.yml)
+<div align="center">
+  <p><strong>Herramienta de línea de comandos todo-en-uno con un dashboard interactivo (TUI) de primer nivel para potenciar tu productividad de desarrollo.</strong></p>
+  
+  [![Crates.io MSRV](https://img.shields.io/crates/msrv/dashtui?style=flat-square&color=blue)](https://crates.io/crates/dashtui)
+  [![Build Status](https://img.shields.io/github/actions/workflow/status/artur282/DashTUI/rust.yml?style=flat-square)](https://github.com/artur282/DashTUI/actions)
+  [![Licencia MIT](https://img.shields.io/badge/License-MIT-green.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+  [![Hecho con Rust](https://img.shields.io/badge/Made_with-Rust-orange?style=flat-square&logo=rust)](https://www.rust-lang.org/)
+</div>
 
-DashTUI es una herramienta de línea de comandos todo-en-uno, diseñada con un dashboard interactivo (TUI) para gestionar proyectos, snippets, tareas y repositorios Git.
+<br/>
 
-## Arquitectura
+DashTUI es una aplicación puramente TUI-céntrica. Ha sido construida fusionando las herramientas indispensables para cualquier ingeniero de software en un solo entorno manejable por teclado.
 
-DashTUI ahora es una aplicación puramente TUI-céntrica. En lugar de ofrecer subcomandos tradicionales (`dashtui init`, etc.), se ha unificado todas sus funciones en un dashboard visual fácil de usar. Al invocar el comando `dashtui`, arranca directamente la interfaz visual interactiva.
+Desde la generación de proyectos con mejores prácticas nativos con **Docker Compose**, hasta gestión de snippets, análisis del repositorio local, pomodoro y hasta integración nativa para descubrir **AI Skills**, todo está a una pulsación de tecla.
 
-## Instalación
+---
 
-Puedes instalar DashTUI directamente desde el repositorio de GitHub con el siguiente comando:
+## 🚀 Características Principales
 
+DashTUI ofrece un set completo de herramientas distribuidas a través de sus pestañas, navegables con las flechas `Izquierda` / `Derecha`:
+
+### 📊 1. General
+Vista general del entorno de trabajo, métricas generales de las tareas, estado del proyecto y recuento de las sesiones pomodoro completadas.
+
+### ✅ 2. Tareas
+Gestor de "to-do" list integrado. Agrega, completa y elimina recordatorios pendientes de tu jornada.
+- `a`: Añadir nueva tarea
+- `x`: Alternar estado completado
+- `d`: Eliminar tarea
+
+### ⏱️ 3. Pomodoro
+Cronómetro de concentración nativo directo en tu terminal. Sigue periodos de enfoque con descansos automáticos.
+- `s`: Iniciar / Pausar el temporizador
+- `r`: Reiniciar la sesión
+
+### 🐳 4. Scaffold (Docker Ready)
+Potente generador de proyectos (`bootstrap`). Genera el código base con las mejores prácticas listas para producción.  
+**Todos los templates son nativos con Docker Compose**, incluyendo archivo `docker-compose.yml`, `Dockerfile` multi-stage, `Makefile` unificado, y `.gitignore`.
+- **Templates**: `rust-cli`, `rust-api`, `python-fastapi`, `python-django` (con PostgreSQL embebido), `node-express`.
+
+### 📝 5. Snippets
+Manager personal de fragmentos de código, conectado directamente a la base de datos local embebida y comunicándose con tu portapapeles.
+- `a`: Añadir nuevo snippet. Todo el código **se lee automáticamente de tu portapapeles actual**.
+- `c`: Copiar el fragmento al portapapeles.
+
+### 🌿 6. Git
+Monitor en tiempo real del estado de tu repositorio Git basado en Conventional Commits.
+- Contribuciones: Muestra el top contributors y total de commits.
+- Ramas: Detecta automáticamente ramas limpias/fuera de uso.
+- `c`: Limpiar ramas locales ya mergeadas.
+
+### 🔌 7. Skills (¡NUEVO!)
+Integración nativa con **[skills.sh](https://skills.sh/)**. Extiende tu entorno integrando skills y comandos externos fácilmente.
+- Realiza búsquedas directamente conectándose al _leaderboard_ del ecosistema Agent.
+- `s`: Buscar una skill usando palabras clave o autor.
+- `l`: Listar el Leaderboard global actual.
+- `Enter`: Instalar inmediatamente mediante `npx skills add` la skill seleccionada.
+
+---
+
+## ⚙️ Instalación
+
+Instalar DashTUI es muy simple, requiere [Rust 1.83+](https://www.rust-lang.org/tools/install) y Git instalados en tu sistema.
+
+**Mediante Make (Recomendado):**
 ```bash
-git clone https://github.com/artur282/DashTUI.git && cd DashTUI && make install
+git clone https://github.com/artur282/DashTUI.git
+cd DashTUI
+make install
 ```
 
-O si prefieres usar `cargo` directamente:
-
+**Mediante Cargo directamente:**
 ```bash
-git clone https://github.com/artur282/DashTUI.git && cd DashTUI && cargo install --path .
+cargo install --git https://github.com/artur282/DashTUI.git
 ```
+*(Opcionalmente clona el repo y usa `cargo install --path .`)*
 
-## Desinstalación
+---
 
-Para desinstalar DashTUI de tu sistema, puedes usar el Makefile (si estás en el directorio del proyecto):
+## 🎮 Uso
 
-```bash
-make uninstall
-```
-
-O usar `cargo` directamente desde cualquier lugar:
-
-```bash
-cargo uninstall dashtui
-```
-
-## Uso
-
-Simplemente ejecuta el comando principal para abrir el dashboard:
+Simplemente ejecuta el comando principal en cualquier carpeta para abrir el dashboard interactivo:
 
 ```bash
 dashtui
 ```
 
-*(Opcional) Si necesitas pasar un nombre personalizado u otros argumentos CLI básicos (según disponibilidad actual), puedes hacerlo, pero la interfaz siempre será TUI:*
+> **Consejo**: La herramienta leerá el nombre de la carpeta actual y cualquier información de Git si te encuentras dentro de un proyecto, así es que siéntete libre de abrir el comando donde estás desarrollando.
 
-```bash
-dashtui --name "Mi proyecto"
-```
+---
 
-## Funcionalidades del Dashboard
+## 🤝 Soporta el Proyecto
 
-El TUI tiene distintas pestañas para ayudarte en la productividad diaria. Utiliza las flechas `Izquierda` y `Derecha` para cambiar entre pestañas.
+El proyecto está en constante evolución y **buscamos a personas entusiastas del Open Source** y de la terminal para contribuir:
 
-### 1. General
+1. **⭐ Dale Estrella al repositorio:** Si la herramienta te ayuda a ser productivo, dar una estrella nos ayuda enormemente a ganar visibilidad.
+2. **🐛 Reporta problemas (Issues):** Contribuye reportando bugs o sugiriendo nuevas herramientas que facilitarían tu día.
+3. **💻 Abre un Pull Request:** Estamos muy felices de ver nuevos programadores de Rust metiendo las manos al código para agregar plantillas para más frameworks, mejorar el diseño UI/UX de [Ratatui](https://ratatui.rs/), u optimizar el código.
+4. **💬 Difunde la herramienta:** Habla con tus colegas sobre DashTUI.
 
-Muestra información clave sobre el entorno de trabajo: métricas generales, estado de las tareas y recuento de los pomodoros completados en la sesión actual.
+¡Cualquiera es bienvenido a ser parte del código libre!
 
-### 2. Tareas
+---
 
-Agrega y da seguimiento a tus recordatorios y "todo" list diarios.
+## 📜 Licencia
 
-- **`a`**: Agregar nueva tarea
-- **`x`**: Alternar estado completado/pendiente
-- **`d`**: Eliminar tarea seleccionada
-- **`↑` / `↓`**: Navegar entre tareas
-
-### 3. Pomodoro
-
-Cronómetro de concentración integrado para periodos de enfoque de 25 minutos seguidos de descansos cortos y largos.
-
-- **`s`**: Iniciar o pausar el temporizador
-- **`r`**: Reiniciar el temporizador
-
-### 4. Scaffold
-
-Potente generador de proyectos. Permite hacer un bootstrap de código base con las mejores prácticas listas para producción (Dockerfile, Makefile, CI).
-
-- **Templates**: `rust-cli`, `rust-api`, `python-fastapi`, `node-express`.
-- **`Enter`**: Elegir proyecto -> Solicita nombre de proyecto -> Genera los archivos localmente e inicializa un repo git local.
-
-### 5. Snippets
-
-Manager personal de piezas de código. Se guardan directamente en una DB local embebida y se comunican con tu portapapeles.
-
-- **`a`**: Agregar nuevo snippet. Te pedirá Título, Lenguaje y Descripción, **el código lo leerá de tu portapapeles actual**.
-- **`c`**: Copiar el snippet seleccionado al portapapeles.
-- **`d`**: Eliminar el snippet seleccionado.
-- **`↑` / `↓`**: Navegar entre snippets.
-
-### 6. Git
-
-Monitor y utilidades para tu repositorio local basado en convenciones de commits (Conventional Commits).
-
-- Muestra el historial general, los top contributors y qué archivos están trackeados.
-- Visualiza el changelog basado en tus commits locales.
-- **`c`**: Limpiar ramas locales ya mergeadas.
-
-## Próximas Funcionalidades
-
-DashTUI sigue en desarrollo activo. Algunas de las características planeadas para futuras versiones incluyen:
-
-- **Más Templates**: Ampliación del catálogo de plantillas para scaffolds con más lenguajes y frameworks populares.
-- **Docker Compose**: Soporte nativo para la generación y gestión de proyectos que utilicen `docker-compose`.
-- **Compatibilidad con Skills**: Integración con las skills de [skills.sh](https://skills.sh/) para extender la potencia del TUI con scripts y herramientas personalizadas.
-
-## Requisitos
-
-- Rust 1.83 o superior.
-- Git (para las funcionalidades de análisis de ramas e inicialización).
-- Portapapeles del sistema (X11, Wayland o Windows) configurado para arboard/xclip.
-
-## Licencia
-
-Este proyecto está bajo la licencia MIT.
+Este proyecto está distribuido y cubierto bajo la licencia [MIT](https://opensource.org/licenses/MIT). Siéntase libre de usar, modificar y distribuir.

@@ -1,4 +1,8 @@
-//! Renderizado de la TUI
+//! Renderizado de la TUI — Dibuja todos los widgets del dashboard.
+//!
+//! Cada pestaña tiene su propia función de renderizado dedicada.
+//! Se incluyen: Overview, Tasks, Pomodoro, Scaffold, Snippets, Git y Skills.
+
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -9,6 +13,7 @@ use ratatui::{
 
 use crate::tui::app::{App, InputMode, PomodoroState, Tab};
 
+/// Punto de entrada principal del renderizado — dibuja tabs, contenido y footer.
 pub fn render(f: &mut Frame, app: &App) {
     let size = f.area();
     let chunks = Layout::default()
@@ -22,6 +27,7 @@ pub fn render(f: &mut Frame, app: &App) {
 
     render_tabs(f, app, chunks[0]);
 
+    // Despachar renderizado según la pestaña activa
     match app.active_tab {
         Tab::Overview => render_overview(f, app, chunks[1]),
         Tab::Tasks => render_tasks(f, app, chunks[1]),
@@ -29,18 +35,21 @@ pub fn render(f: &mut Frame, app: &App) {
         Tab::Scaffold => render_scaffold(f, app, chunks[1]),
         Tab::Snippets => render_snippets(f, app, chunks[1]),
         Tab::Git => render_git(f, app, chunks[1]),
+        Tab::Skills => render_skills(f, app, chunks[1]),
     }
 
     render_footer(f, chunks[2]);
 
+    // Mostrar modal de entrada de texto si hay un modo activo
     if app.input_mode != InputMode::None {
         render_input_modal(f, app, size);
     }
 }
 
+/// Barra superior de pestañas con indicador de la pestaña activa.
 fn render_tabs(f: &mut Frame, app: &App, area: Rect) {
     let titles: Vec<Line> = vec![
-        "General", "Tareas", "Pomodoro", "Scaffold", "Snippets", "Git",
+        "General", "Tareas", "Pomodoro", "Scaffold", "Snippets", "Git", "Skills",
     ]
     .into_iter()
     .map(Line::from)
@@ -53,6 +62,7 @@ fn render_tabs(f: &mut Frame, app: &App, area: Rect) {
         Tab::Scaffold => 3,
         Tab::Snippets => 4,
         Tab::Git => 5,
+        Tab::Skills => 6,
     };
 
     let tabs = Tabs::new(titles)
@@ -69,6 +79,7 @@ fn render_tabs(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(tabs, area);
 }
 
+/// Pestaña de resumen general — métricas del proyecto.
 fn render_overview(f: &mut Frame, app: &App, area: Rect) {
     let text = vec![
         Line::from(""),
@@ -112,6 +123,7 @@ fn render_overview(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, area);
 }
 
+/// Pestaña de tareas — lista interactiva con estado completado/pendiente.
 fn render_tasks(f: &mut Frame, app: &App, area: Rect) {
     let items: Vec<ListItem> = app
         .tasks
@@ -142,6 +154,7 @@ fn render_tasks(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(list, area);
 }
 
+/// Pestaña de pomodoro — timer de concentración con estados visuales.
 fn render_pomodoro(f: &mut Frame, app: &App, area: Rect) {
     let secs = app.pomodoro_timer.as_secs();
     let mins = secs / 60;
@@ -188,6 +201,7 @@ fn render_pomodoro(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(p, area);
 }
 
+/// Pestaña de scaffold — selector de templates con panel de salida.
 fn render_scaffold(f: &mut Frame, app: &App, area: Rect) {
     let templates = crate::commands::init::AVAILABLE_TEMPLATES;
 
@@ -202,7 +216,8 @@ fn render_scaffold(f: &mut Frame, app: &App, area: Rect) {
             } else {
                 Style::default()
             };
-            ListItem::new(format!("  {}  ", t)).style(style)
+            // Mostrar icono de Docker para indicar que todos son Docker Compose
+            ListItem::new(format!("  🐳 {}  ", t)).style(style)
         })
         .collect();
 
@@ -214,24 +229,45 @@ fn render_scaffold(f: &mut Frame, app: &App, area: Rect) {
     let list = List::new(items).block(
         Block::default()
             .borders(Borders::ALL)
-            .title(" Templates (Enter: init) "),
+            .title(" Templates Docker 🐳 (Enter: init) "),
     );
 
     f.render_widget(list, chunks[0]);
 
+    // Panel derecho: logs de scaffold o instrucciones
     if let Some(ref logs) = app.scaffold_logs {
         let text: Vec<Line> = logs.iter().map(|l| Line::from(l.as_str())).collect();
         let p =
             Paragraph::new(text).block(Block::default().borders(Borders::ALL).title(" Salida "));
         f.render_widget(p, chunks[1]);
     } else {
-        let p = Paragraph::new("Selecciona un template y presiona Enter para generar un proyecto.\nEl proyecto se genarará en el CWD actual.")
+        let instructions = vec![
+            Line::from(""),
+            Line::from(Span::styled(
+                " Selecciona un template y presiona Enter",
+                Style::default().fg(Color::Cyan),
+            )),
+            Line::from(""),
+            Line::from(" Cada proyecto incluye:"),
+            Line::from(Span::styled("  🐳 docker-compose.yml", Style::default().fg(Color::Green))),
+            Line::from(Span::styled("  📦 Dockerfile (multi-stage)", Style::default().fg(Color::Green))),
+            Line::from(Span::styled("  ⚙️  Makefile (dev + docker)", Style::default().fg(Color::Green))),
+            Line::from(Span::styled("  📝 .gitignore", Style::default().fg(Color::Green))),
+            Line::from(Span::styled("  🔀 Git init", Style::default().fg(Color::Green))),
+            Line::from(""),
+            Line::from(Span::styled(
+                " El proyecto se genera en el CWD actual.",
+                Style::default().fg(Color::DarkGray),
+            )),
+        ];
+        let p = Paragraph::new(instructions)
             .block(Block::default().borders(Borders::ALL).title(" Instrucciones "))
-            .style(Style::default().fg(Color::DarkGray));
+            .style(Style::default());
         f.render_widget(p, chunks[1]);
     }
 }
 
+/// Pestaña de snippets — manager de fragmentos de código con preview.
 fn render_snippets(f: &mut Frame, app: &App, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Horizontal)
@@ -283,6 +319,7 @@ fn render_snippets(f: &mut Frame, app: &App, area: Rect) {
     }
 }
 
+/// Pestaña de Git — stats, contributors, changelog y limpieza de ramas.
 fn render_git(f: &mut Frame, app: &App, area: Rect) {
     if let Some(err) = &app.git_error {
         let p = Paragraph::new(format!("⚠️ Error Git: {}", err))
@@ -296,7 +333,7 @@ fn render_git(f: &mut Frame, app: &App, area: Rect) {
         .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
         .split(area);
 
-    // Stats Side
+    // Panel izquierdo: estadísticas y ramas
     if let Some(stats) = &app.git_stats {
         let mut lines = vec![
             Line::from(vec![
@@ -369,7 +406,7 @@ fn render_git(f: &mut Frame, app: &App, area: Rect) {
         );
     }
 
-    // Changelog Side
+    // Panel derecho: changelog
     if let Some(ch) = &app.git_changelog {
         let mut lines = Vec::new();
         for entry in ch {
@@ -400,6 +437,153 @@ fn render_git(f: &mut Frame, app: &App, area: Rect) {
     }
 }
 
+/// Pestaña de Skills — búsqueda e instalación de skills desde skills.sh.
+///
+/// Layout: Panel izquierdo con lista de skills + Panel derecho con detalles/logs.
+fn render_skills(f: &mut Frame, app: &App, area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(45), Constraint::Percentage(55)])
+        .split(area);
+
+    // ── Panel izquierdo: lista de skills ──
+    let mut left_lines: Vec<ListItem> = Vec::new();
+
+    if app.skills_results.is_empty() {
+        // Instrucciones cuando no hay resultados
+        left_lines.push(ListItem::new(Line::from(Span::styled(
+            " Presiona 's' para buscar skills",
+            Style::default().fg(Color::DarkGray),
+        ))));
+        left_lines.push(ListItem::new(Line::from(Span::styled(
+            " o 'l' para cargar el leaderboard",
+            Style::default().fg(Color::DarkGray),
+        ))));
+    } else {
+        // Mostrar skills encontradas
+        for (i, skill) in app.skills_results.iter().enumerate() {
+            let style = if i == app.selected_skill_index {
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+
+            let item_text = format!(
+                " #{:<3} {} ({}) [{}]",
+                skill.rank, skill.name, skill.author, skill.installs
+            );
+            left_lines.push(ListItem::new(item_text).style(style));
+        }
+    }
+
+    let search_info = if app.skills_search_query.is_empty() {
+        String::from(" Skills 🔌 (s: buscar, l: leaderboard, Enter: instalar) ")
+    } else {
+        format!(
+            " Skills 🔌 — '{}' (s: buscar, Enter: instalar) ",
+            app.skills_search_query
+        )
+    };
+
+    let list = List::new(left_lines)
+        .block(Block::default().borders(Borders::ALL).title(search_info));
+    f.render_widget(list, chunks[0]);
+
+    // ── Panel derecho: detalles de la skill seleccionada o logs de instalación ──
+    let mut right_lines: Vec<Line> = Vec::new();
+
+    // Mostrar status si existe
+    if let Some(ref status) = app.skills_status {
+        right_lines.push(Line::from(Span::styled(
+            status,
+            Style::default().fg(Color::Cyan),
+        )));
+        right_lines.push(Line::from(""));
+    }
+
+    // Mostrar logs de instalación si existen
+    if let Some(ref logs) = app.skills_install_logs {
+        right_lines.push(Line::from(Span::styled(
+            "── Resultado de instalación ──",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        )));
+        right_lines.push(Line::from(""));
+        for log in logs {
+            right_lines.push(Line::from(log.as_str()));
+        }
+    } else if let Some(skill) = app.skills_results.get(app.selected_skill_index) {
+        // Mostrar detalle de la skill seleccionada
+        right_lines.push(Line::from(vec![
+            Span::styled("Nombre: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(&skill.name, Style::default().fg(Color::Yellow)),
+        ]));
+        right_lines.push(Line::from(vec![
+            Span::styled("Autor: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(&skill.author, Style::default().fg(Color::Green)),
+        ]));
+        right_lines.push(Line::from(vec![
+            Span::styled("Installs: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(&skill.installs, Style::default().fg(Color::Cyan)),
+        ]));
+        right_lines.push(Line::from(vec![
+            Span::styled("Ranking: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("#{}", skill.rank),
+                Style::default().fg(Color::LightMagenta),
+            ),
+        ]));
+        right_lines.push(Line::from(""));
+        right_lines.push(Line::from(vec![
+            Span::styled("Instalar: ", Style::default().add_modifier(Modifier::BOLD)),
+            Span::styled(
+                format!("npx skills add {}", skill.install_path),
+                Style::default().fg(Color::DarkGray),
+            ),
+        ]));
+        right_lines.push(Line::from(""));
+        right_lines.push(Line::from(Span::styled(
+            "Presiona Enter para instalar esta skill",
+            Style::default().fg(Color::Yellow),
+        )));
+    } else {
+        // Sin skill seleccionada — instrucciones generales
+        right_lines.push(Line::from(""));
+        right_lines.push(Line::from(Span::styled(
+            "🔌 Integración con skills.sh",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        )));
+        right_lines.push(Line::from(""));
+        right_lines.push(Line::from(
+            " Busca e instala skills para potenciar tus agentes AI.",
+        ));
+        right_lines.push(Line::from(""));
+        right_lines.push(Line::from(Span::styled(
+            " Controles:",
+            Style::default().add_modifier(Modifier::BOLD),
+        )));
+        right_lines.push(Line::from("  s → Buscar skills por nombre"));
+        right_lines.push(Line::from("  l → Cargar leaderboard completo"));
+        right_lines.push(Line::from("  Enter → Instalar skill seleccionada"));
+        right_lines.push(Line::from("  ↑/↓ → Navegar lista"));
+    }
+
+    let p = Paragraph::new(right_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Detalle / Instalación "),
+        )
+        .wrap(Wrap { trim: false });
+    f.render_widget(p, chunks[1]);
+}
+
+/// Barra de pie de página con modo actual y atajos de teclado.
 fn render_footer(f: &mut Frame, area: Rect) {
     let mode = "NORMAL";
     let instructions = " q: Salir | ←/→: Tabs | ↑/↓: Navegar ";
@@ -423,6 +607,7 @@ fn render_footer(f: &mut Frame, area: Rect) {
     f.render_widget(p, area);
 }
 
+/// Modal de entrada de texto superpuesto sobre la vista principal.
 fn render_input_modal(f: &mut Frame, app: &App, size: Rect) {
     let title = match app.input_mode {
         InputMode::TaskAdd => " Nueva Tarea ",
@@ -430,6 +615,7 @@ fn render_input_modal(f: &mut Frame, app: &App, size: Rect) {
         InputMode::SnippetTitle => " Título del Snippet (El código se leerá del Clipboard) ",
         InputMode::SnippetLanguage => " Lenguaje (ej: rust, js, py) ",
         InputMode::SnippetDescription => " Descripción del Snippet ",
+        InputMode::SkillSearch => " Buscar Skill (nombre o autor) — Enter para buscar ",
         _ => " Input ",
     };
 
@@ -442,6 +628,7 @@ fn render_input_modal(f: &mut Frame, app: &App, size: Rect) {
     f.render_widget(p, area);
 }
 
+/// Calcula un rectángulo centrado en `r` con porcentajes dados.
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)

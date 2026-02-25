@@ -47,6 +47,12 @@ dirs = "6"
 # Chrono para fechas
 chrono = "0.4"
 
+# HTTP blocking client para scraping de skills.sh
+ureq = "2"
+
+# HTML parser para web scraping
+scraper = "0.22"
+
 [dev-dependencies]
 tempfile = "3"
 

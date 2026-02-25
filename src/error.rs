@@ -31,6 +31,10 @@ pub enum AppError {
     #[error("Error de dashboard: {0}")]
     Dashboard(#[from] DashboardError),
 
+    /// Error relacionado con las skills de skills.sh
+    #[error("Error de skills: {0}")]
+    Skills(#[from] SkillsError),
+
     /// Error de entrada/salida del sistema de archivos
     #[error("Error de IO: {0}")]
     Io(#[from] std::io::Error),
@@ -44,7 +48,7 @@ pub enum ScaffoldError {
     DirectoryExists(String),
 
     /// Template no reconocido o no disponible
-    #[error("Template '{0}' no encontrado. Disponibles: rust-cli, rust-api, python-fastapi, node-express")]
+    #[error("Template '{0}' no encontrado. Usa los templates disponibles del catálogo.")]
     TemplateNotFound(String),
 
     /// Error de IO durante el scaffold
@@ -115,6 +119,18 @@ pub enum DashboardError {
     /// Error al renderizar widgets de Ratatui
     #[error("Error de renderizado: {0}")]
     Render(String),
+}
+
+/// Errores específicos de la integración con skills.sh.
+#[derive(Debug, Error)]
+pub enum SkillsError {
+    /// Error de conexión HTTP al hacer scraping de skills.sh
+    #[error("Error al hacer la solicitud de web scraping: {0}")]
+    Network(String),
+
+    /// Error al parsear el HTML de la respuesta
+    #[error("Error al parsear el HTML: {0}")]
+    ParseError(String),
 }
 
 /// Tipo Result genérico de la aplicación para simplificar firmas de funciones.

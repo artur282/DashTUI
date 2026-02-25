@@ -1,8 +1,14 @@
 //! Estado central de la aplicación TUI.
+//!
+//! Contiene la estructura `App` que mantiene el estado global del dashboard,
+//! incluyendo tabs, tareas, pomodoro, scaffold, snippets, git y skills.
+
 use crate::commands::git_utils::{ChangelogEntry, GitStats};
+use crate::commands::skills::Skill;
 use crate::db::storage::{Snippet, Storage, Task};
 use std::time::Duration;
 
+/// Pestañas disponibles en el dashboard TUI
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tab {
     Overview,
@@ -11,8 +17,10 @@ pub enum Tab {
     Scaffold,
     Snippets,
     Git,
+    Skills,
 }
 
+/// Modos de entrada del usuario (modales de texto)
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InputMode {
     None,
@@ -21,8 +29,10 @@ pub enum InputMode {
     SnippetTitle,
     SnippetLanguage,
     SnippetDescription,
+    SkillSearch,
 }
 
+/// Estados del timer Pomodoro
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PomodoroState {
     Work,
@@ -30,46 +40,65 @@ pub enum PomodoroState {
     LongBreak,
 }
 
+/// Estado central de la aplicación que contiene todos los datos del dashboard.
 pub struct App {
     pub active_tab: Tab,
     pub should_quit: bool,
     pub input_mode: InputMode,
     pub input_buffer: String,
 
-    // Overview data
+    // ── Overview data ──
     pub project_name: String,
     pub _file_count: usize,
 
-    // Task data
+    // ── Task data ──
     pub tasks: Vec<Task>,
     pub selected_task_index: usize,
 
-    // Pomodoro data
+    // ── Pomodoro data ──
     pub pomodoro: PomodoroState,
     pub pomodoro_timer: Duration,
     pub pomodoro_running: bool,
     pub pomodoros_completed: u32,
 
-    // Scaffold data
+    // ── Scaffold data ──
     pub selected_template_index: usize,
     pub scaffold_logs: Option<Vec<String>>,
 
-    // Snippets data
+    // ── Snippets data ──
     pub snippets: Vec<Snippet>,
     pub selected_snippet_index: usize,
     pub new_snippet_draft: (String, String, String), // (Title, Lang, Desc)
 
-    // Git data
+    // ── Git data ──
     pub git_stats: Option<GitStats>,
     pub git_changelog: Option<Vec<ChangelogEntry>>,
     pub git_merged_branches: Option<Vec<String>>,
     pub git_error: Option<String>,
 
-    // Storage connection
+    // ── Skills data (skills.sh) ──
+    /// Lista de skills obtenidas del scraping de skills.sh
+    pub skills_results: Vec<Skill>,
+    /// Índice de la skill seleccionada en la lista
+    pub selected_skill_index: usize,
+    /// Último query de búsqueda utilizado
+    pub skills_search_query: String,
+    /// Mensaje de estado de la operación de skills
+    pub skills_status: Option<String>,
+    /// Logs de la última instalación de skill
+    pub skills_install_logs: Option<Vec<String>>,
+    /// Indica si se está cargando una operación de skills
+    pub skills_loading: bool,
+
+    // ── Storage connection ──
     storage: Option<Storage>,
 }
 
 impl App {
+    /// Crea una nueva instancia de App con valores por defecto.
+    ///
+    /// Inicializa la conexión a la base de datos SQLite y carga
+    /// las tareas y snippets almacenados.
     pub fn new() -> Self {
         let mut app = Self {
             active_tab: Tab::Overview,
@@ -107,14 +136,22 @@ impl App {
             git_merged_branches: None,
             git_error: None,
 
+            // Skills inicializados vacíos
+            skills_results: Vec::new(),
+            selected_skill_index: 0,
+            skills_search_query: String::new(),
+            skills_status: None,
+            skills_install_logs: None,
+            skills_loading: false,
+
             storage: None,
         };
 
+        // Inicializar base de datos y cargar datos persistidos
         match Storage::new() {
             Ok(ref mut storage) => {
                 app.tasks = storage.list_tasks().unwrap_or_default();
                 app.snippets = storage.list_snippets(None).unwrap_or_default();
-                // Move instead of clone ref
                 app.storage = Storage::new().ok();
             }
             Err(e) => eprintln!("Error inicializando DB local: {}", e),
@@ -123,16 +160,23 @@ impl App {
         app
     }
 
+    // ── Modos de entrada ─────────────────────────────────────────────────
+
+    /// Entra en un modo de entrada específico y limpia el buffer.
     pub fn enter_input_mode(&mut self, mode: InputMode) {
         self.input_mode = mode;
         self.input_buffer.clear();
     }
 
+    /// Sale del modo de entrada actual y limpia el buffer.
     pub fn exit_input_mode(&mut self) {
         self.input_mode = InputMode::None;
         self.input_buffer.clear();
     }
 
+    // ── Datos ────────────────────────────────────────────────────────────
+
+    /// Recarga tareas y snippets desde la base de datos.
     pub fn refresh_data(&mut self) {
         if let Some(ref storage) = self.storage {
             self.tasks = storage.list_tasks().unwrap_or_default();
@@ -140,6 +184,7 @@ impl App {
         }
     }
 
+    /// Carga estadísticas y changelog desde el repositorio Git local.
     pub fn load_git_data(&mut self) {
         match crate::commands::git_utils::get_stats() {
             Ok(s) => self.git_stats = Some(s),
@@ -156,6 +201,12 @@ impl App {
         }
     }
 
+    // ── Pomodoro ─────────────────────────────────────────────────────────
+
+    /// Avanza el timer del pomodoro en un tick (1 segundo).
+    ///
+    /// Cuando el timer llega a cero, transiciona automáticamente
+    /// entre estados Work → ShortBreak/LongBreak → Work.
     pub fn on_tick(&mut self) {
         if self.pomodoro_running {
             if self.pomodoro_timer.as_secs() > 0 {
@@ -163,7 +214,6 @@ impl App {
             } else {
                 self.pomodoro_running = false;
                 self.pomodoros_completed += 1;
-                // Transition state
                 match self.pomodoro {
                     PomodoroState::Work => {
                         if self.pomodoros_completed % 4 == 0 {
@@ -183,6 +233,9 @@ impl App {
         }
     }
 
+    // ── Navegación entre tabs ────────────────────────────────────────────
+
+    /// Avanza a la siguiente pestaña (circular).
     pub fn next_tab(&mut self) {
         self.active_tab = match self.active_tab {
             Tab::Overview => Tab::Tasks,
@@ -190,27 +243,34 @@ impl App {
             Tab::Pomodoro => Tab::Scaffold,
             Tab::Scaffold => Tab::Snippets,
             Tab::Snippets => Tab::Git,
-            Tab::Git => Tab::Overview,
+            Tab::Git => Tab::Skills,
+            Tab::Skills => Tab::Overview,
         };
+        // Carga lazy de datos de Git
         if self.active_tab == Tab::Git && self.git_stats.is_none() {
             self.load_git_data();
         }
     }
 
+    /// Retrocede a la pestaña anterior (circular).
     pub fn prev_tab(&mut self) {
         self.active_tab = match self.active_tab {
-            Tab::Overview => Tab::Git,
+            Tab::Overview => Tab::Skills,
             Tab::Tasks => Tab::Overview,
             Tab::Pomodoro => Tab::Tasks,
             Tab::Scaffold => Tab::Pomodoro,
             Tab::Snippets => Tab::Scaffold,
             Tab::Git => Tab::Snippets,
+            Tab::Skills => Tab::Git,
         };
         if self.active_tab == Tab::Git && self.git_stats.is_none() {
             self.load_git_data();
         }
     }
 
+    // ── Acciones de Tasks ────────────────────────────────────────────────
+
+    /// Agrega una nueva tarea desde el buffer de entrada.
     pub fn add_task(&mut self) {
         let desc = self.input_buffer.trim().to_string();
         if !desc.is_empty() {
@@ -223,6 +283,7 @@ impl App {
         self.exit_input_mode();
     }
 
+    /// Alterna el estado completado/pendiente de la tarea seleccionada.
     pub fn toggle_task(&mut self) {
         if self.tasks.is_empty() {
             return;
@@ -238,6 +299,7 @@ impl App {
         }
     }
 
+    /// Elimina la tarea seleccionada.
     pub fn delete_task(&mut self) {
         if self.tasks.is_empty() {
             return;
@@ -258,6 +320,9 @@ impl App {
         }
     }
 
+    // ── Acciones de Snippets ─────────────────────────────────────────────
+
+    /// Elimina el snippet seleccionado.
     pub fn delete_snippet(&mut self) {
         if self.snippets.is_empty() {
             return;
@@ -276,6 +341,7 @@ impl App {
         }
     }
 
+    /// Copia el código del snippet seleccionado al clipboard del sistema.
     pub fn copy_snippet(&mut self) {
         if self.snippets.is_empty() {
             return;
@@ -287,6 +353,9 @@ impl App {
         }
     }
 
+    // ── Acciones de Scaffold ─────────────────────────────────────────────
+
+    /// Ejecuta el scaffold del template seleccionado con el nombre del buffer.
     pub fn execute_scaffold(&mut self) {
         let name = if self.input_buffer.trim().is_empty() {
             None
@@ -302,6 +371,7 @@ impl App {
         self.exit_input_mode();
     }
 
+    /// Guarda un snippet leyendo el código desde el clipboard del sistema.
     pub fn save_snippet_from_clipboard(&mut self) {
         let code = if let Ok(mut clipboard) = arboard::Clipboard::new() {
             clipboard.get_text().unwrap_or_default()
@@ -330,11 +400,66 @@ impl App {
         self.exit_input_mode();
     }
 
+    // ── Acciones de Git ──────────────────────────────────────────────────
+
+    /// Limpia las ramas locales ya mergeadas.
     pub fn clean_git_branches(&mut self) {
         if let Some(ref branches) = self.git_merged_branches {
             let clones = branches.clone();
             let _ = crate::commands::git_utils::delete_branches(&clones);
-            self.load_git_data(); // reload
+            self.load_git_data();
         }
     }
+
+    // ── Acciones de Skills ───────────────────────────────────────────────
+
+    /// Busca skills en skills.sh usando el query del buffer de entrada.
+    ///
+    /// Realiza web scraping del sitio y filtra los resultados
+    /// por nombre/autor según el query proporcionado.
+    pub fn search_skills(&mut self) {
+        let query = self.input_buffer.trim().to_string();
+        self.skills_search_query = query.clone();
+        self.skills_loading = true;
+        self.skills_install_logs = None;
+
+        if query.is_empty() {
+            // Sin query: cargar todas las skills del leaderboard
+            match crate::commands::skills::fetch_all_skills() {
+                Ok(skills) => {
+                    self.skills_status = Some(format!(
+                        "✅ {} skills encontradas",
+                        skills.len()
+                    ));
+                    self.skills_results = skills;
+                    self.selected_skill_index = 0;
+                }
+                Err(e) => {
+                    self.skills_status = Some(format!("❌ Error: {}", e));
+                    self.skills_results.clear();
+                }
+            }
+        } else {
+            // Con query: buscar y filtrar
+            match crate::commands::skills::search_skills(&query) {
+                Ok(skills) => {
+                    self.skills_status = Some(format!(
+                        "✅ {} skills encontradas para '{}'",
+                        skills.len(),
+                        query
+                    ));
+                    self.skills_results = skills;
+                    self.selected_skill_index = 0;
+                }
+                Err(e) => {
+                    self.skills_status = Some(format!("❌ Error: {}", e));
+                    self.skills_results.clear();
+                }
+            }
+        }
+
+        self.skills_loading = false;
+        self.exit_input_mode();
+    }
+
 }
