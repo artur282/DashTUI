@@ -25,3 +25,4 @@ test.db
 /.agents/ 
 .skills-lock.json
 .skills.json
+skills-lock.json

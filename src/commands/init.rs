@@ -215,12 +215,7 @@ fn create_django_project(
     logs: &mut Vec<String>,
 ) -> Result<(), ScaffoldError> {
     // Estructura de directorios Django
-    let app_dirs = &[
-        &format!("{project_name}"),
-        "static",
-        "templates",
-        "apps",
-    ];
+    let app_dirs = &[project_name, "static", "templates", "apps"];
     create_directories(project_path, app_dirs)?;
 
     // manage.py — punto de entrada principal de Django

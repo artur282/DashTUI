@@ -9,7 +9,10 @@ use std::time::{Duration, Instant};
 use crossterm::{
     event::{self, Event, KeyCode, KeyModifiers},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{
+        disable_raw_mode, enable_raw_mode, Clear, ClearType, EnterAlternateScreen,
+        LeaveAlternateScreen,
+    },
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 
@@ -48,7 +51,7 @@ pub fn execute() -> Result<(), DashboardError> {
 /// Renderiza la UI, captura eventos de teclado y despacha acciones
 /// según la pestaña activa y el modo de entrada actual.
 fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, mut app: App) -> io::Result<()> {
-    let tick_rate = Duration::from_millis(250);
+    let tick_rate = Duration::from_millis(1000);
     let mut last_tick = Instant::now();
 
     loop {
@@ -176,19 +179,32 @@ fn handle_normal_mode(app: &mut App, key_code: KeyCode) {
                 let install_path = skill.install_path.clone();
 
                 // 1. Salir temporalmente del modo TUI
-                let _ = disable_raw_mode();
-                let _ = execute!(io::stdout(), LeaveAlternateScreen);
+                if let Err(e) = disable_raw_mode() {
+                    eprintln!("Warning: No se pudo deshabilitar raw mode: {}", e);
+                }
+                if let Err(e) = execute!(io::stdout(), LeaveAlternateScreen) {
+                    eprintln!("Warning: No se pudo salir del modo alternativo: {}", e);
+                }
+
+                // Limpiar pantalla antes de ejecutar el comando
+                let _ = execute!(io::stdout(), Clear(ClearType::All));
 
                 // 2. Ejecutar instalación interactiva
                 let _ = crate::commands::skills::install_skill_interactive(&install_path);
 
+                // Limpiar pantalla después de ejecutar el comando
+                let _ = execute!(io::stdout(), Clear(ClearType::All));
+
                 // 3. Restaurar el modo TUI
-                let _ = enable_raw_mode();
-                let _ = execute!(io::stdout(), EnterAlternateScreen);
-                
-                // Forzar un refresco completo de la pantalla
-                // terminal.clear() se usará fuera de aquí si es necesario, 
-                // pero Ratatui redibujará en el siguiente loop.
+                if let Err(e) = execute!(io::stdout(), EnterAlternateScreen) {
+                    eprintln!("Warning: No se pudo entrar al modo alternativo: {}", e);
+                }
+                if let Err(e) = enable_raw_mode() {
+                    eprintln!("Warning: No se pudo habilitar raw mode: {}", e);
+                }
+
+                // Limpiar el buffer de entrada y forzar redibujado
+                app.input_buffer.clear();
             }
         }
 

@@ -32,12 +32,29 @@ pub fn get_stats() -> Result<GitStats, GitError> {
     // Contar ramas
     let local_branches = repo.branches(Some(git2::BranchType::Local))?.count();
 
-    // Contar tracked
-    let tracked_files = repo.index().map(|idx| idx.len()).unwrap_or(0);
+    // Contar archivos rastreados
+    let tracked_files = repo
+        .index()
+        .map(|idx| {
+            let mut count = 0;
+            for _ in idx.iter() {
+                count += 1;
+            }
+            count
+        })
+        .unwrap_or(0);
 
     // Commits e info de authors
     let mut revwalk = repo.revwalk()?;
-    revwalk.push_head()?;
+    if revwalk.push_head().is_err() {
+        // No hay commits aún, retornar stats parciales
+        return Ok(GitStats {
+            total_commits: 0,
+            contributors: Vec::new(),
+            local_branches,
+            tracked_files,
+        });
+    }
 
     let mut total_commits = 0u64;
     let mut hash_contributors: HashMap<String, u64> = HashMap::new();

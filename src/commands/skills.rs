@@ -27,6 +27,55 @@ pub struct Skill {
 /// URL base del sitio de skills
 const SKILLS_BASE_URL: &str = "https://skills.sh";
 
+/// Obtiene el comando de instalación de una skill específica desde su página.
+/// Hace scraping de https://skills.sh/author/repo/skill para obtener el comando exacto.
+pub fn get_install_command(install_path: &str) -> Result<String, SkillsError> {
+    let url = format!("{}/{}", SKILLS_BASE_URL, install_path);
+
+    let body = fetch_page(&url)?;
+
+    // Buscar el comando en el HTML - típicamente está en un bloque de código o texto
+    let document = Html::parse_document(&body);
+
+    // Buscar elementos que contengan el comando de instalación
+    let text_selector = Selector::parse("p, code, pre")
+        .map_err(|e| SkillsError::ParseError(format!("Selector inválido: {e:?}")))?;
+
+    for element in document.select(&text_selector) {
+        let text = element.text().collect::<String>();
+        // Buscar patrones como "npx skills add ..."
+        if text.contains("npx skills add") {
+            // Extraer el comando completo
+            if let Some(start) = text.find("npx skills add") {
+                let rest = &text[start..];
+                // Tomar hasta el final de la línea o hasta 100 caracteres
+                let cmd: String = rest.chars().take(100).collect();
+                let cmd = cmd.trim().to_string();
+                if !cmd.is_empty() {
+                    return Ok(cmd);
+                }
+            }
+        }
+    }
+
+    // Si no encontramos el comando, intentar formato por defecto
+    Err(SkillsError::ParseError(
+        "No se encontró comando de instalación".to_string(),
+    ))
+}
+
+/// Fetch una página específica
+fn fetch_page(url: &str) -> Result<String, SkillsError> {
+    let response = ureq::get(url)
+        .set("User-Agent", "DashTUI/1.0 (Rust CLI Tool)")
+        .call()
+        .map_err(|e| SkillsError::Network(e.to_string()))?;
+
+    response
+        .into_string()
+        .map_err(|e| SkillsError::Network(e.to_string()))
+}
+
 /// Busca skills en skills.sh mediante web scraping.
 ///
 /// Realiza una petición HTTP GET al sitio, parsea el HTML resultante
@@ -69,6 +118,7 @@ pub fn fetch_all_skills() -> Result<Vec<Skill>, SkillsError> {
 /// Realiza la petición HTTP GET a skills.sh y retorna el HTML como string.
 fn fetch_skills_page() -> Result<String, SkillsError> {
     let response = ureq::get(SKILLS_BASE_URL)
+        .set("User-Agent", "DashTUI/1.0 (Rust CLI Tool)")
         .call()
         .map_err(|e| SkillsError::Network(e.to_string()))?;
 
@@ -79,42 +129,61 @@ fn fetch_skills_page() -> Result<String, SkillsError> {
 
 /// Parsea el HTML de skills.sh y extrae las skills del leaderboard.
 ///
-/// Busca enlaces con formato `/author/repo/skill-name` en la tabla del leaderboard
-/// y extrae la metadata de cada skill encontrada.
+/// La estructura del HTML es:
+/// [
+/// ### skill-name
+/// author/repo
+/// installs
+/// ](/author/repo/skill-name)
 fn parse_skills_from_html(html: &str) -> Result<Vec<Skill>, SkillsError> {
     let document = Html::parse_document(html);
 
-    // Selector para los enlaces de skills en el leaderboard
-    // Los links de skills tienen la forma: /author/repo/skill-name
+    // Buscar todos los enlaces que parecen ser skills
     let link_selector = Selector::parse("a[href]")
         .map_err(|e| SkillsError::ParseError(format!("Selector inválido: {e:?}")))?;
 
     let mut skills = Vec::new();
-    let mut rank = 0_usize;
+    let mut seen = std::collections::HashSet::new();
 
     for element in document.select(&link_selector) {
         if let Some(href) = element.value().attr("href") {
-            // Filtrar solo enlaces con formato /author/repo/skill-name
-            let parts: Vec<&str> = href.trim_start_matches('/').split('/').collect();
-            if parts.len() >= 3 && !href.starts_with("http") && !is_navigation_link(href) {
-                rank += 1;
-                let author = parts[0].to_string();
-                let skill_name = parts.last().unwrap_or(&"").to_string();
-                let install_path = href.trim_start_matches('/').to_string();
+            // Los enlaces de skills empiezan con / y tienen formato /author/repo/skill
+            if href.starts_with('/') && !href.starts_with("http") {
+                let path = href.trim_start_matches('/');
+                let parts: Vec<&str> = path.split('/').collect();
 
-                // Extraer el texto del enlace que puede contener nombre e installs
-                let text = element.text().collect::<String>();
+                // Debe tener al menos 3 partes: author/repo/skill
+                if parts.len() >= 3 {
+                    let author = parts[0].to_string();
+                    let skill_name = parts.last().unwrap_or(&"").to_string();
 
-                // Intentar separar nombre de installs del texto
-                let installs = extract_installs_from_text(&text);
+                    // Ignorar rutas de navegación
+                    if is_navigation_link(href) {
+                        continue;
+                    }
 
-                skills.push(Skill {
-                    rank,
-                    name: skill_name,
-                    author,
-                    install_path,
-                    installs,
-                });
+                    // Crear un identificador único para evitar duplicados
+                    let unique_id = format!("{}:{}", author, skill_name);
+                    if seen.contains(&unique_id) {
+                        continue;
+                    }
+                    seen.insert(unique_id);
+
+                    // Si no encontramos installs en el enlace, usar N/A
+                    // (el scraping de installs es complejo por la estructura del HTML)
+                    let installs = "N/A".to_string();
+
+                    let install_path = path.to_string();
+                    let rank = skills.len() + 1;
+
+                    skills.push(Skill {
+                        rank,
+                        name: skill_name,
+                        author,
+                        install_path,
+                        installs,
+                    });
+                }
             }
         }
     }
@@ -130,42 +199,13 @@ fn parse_skills_from_html(html: &str) -> Result<Vec<Skill>, SkillsError> {
 
 /// Determina si un enlace es de navegación del sitio (no una skill).
 fn is_navigation_link(href: &str) -> bool {
-    let nav_paths = [
-        "/docs",
-        "/audits",
-        "/trending",
-        "/hot",
-        "/faq",
-    ];
-    nav_paths.iter().any(|p| href == *p)
+    let nav_paths = ["/docs", "/audits", "/trending", "/hot", "/faq"];
+    nav_paths.contains(&href)
 }
 
-/// Extrae la cantidad de instalaciones del texto de un enlace de skill.
-///
-/// El texto puede ser algo como "find-skills319.5K" o simplemente "find-skills".
-fn extract_installs_from_text(text: &str) -> String {
-    // Buscar patrones numéricos al final (ej: "319.5K", "1.2K")
-    let trimmed = text.trim();
-    // Recorrer desde el final buscando donde empieza el número
-    let mut install_start = trimmed.len();
-    for (i, ch) in trimmed.char_indices().rev() {
-        if ch.is_ascii_digit() || ch == '.' || ch == 'K' || ch == 'M' || ch == 'k' {
-            install_start = i;
-        } else {
-            break;
-        }
-    }
-
-    if install_start < trimmed.len() {
-        trimmed[install_start..].to_string()
-    } else {
-        "N/A".to_string()
-    }
-}
-
-/// Instala una skill ejecutando `npx skills add <install_path>`.
+/// Instala una skill buscando el comando de instalación desde la página de la skill.
 /// Ejecuta la instalación de una skill de forma interactiva.
-/// 
+///
 /// Suspende el control del terminal por parte del TUI para permitir que el usuario
 /// interactúe con los prompts y selecciones del comando `npx skills add`.
 pub fn install_skill_interactive(install_path: &str) -> std::io::Result<()> {
@@ -173,14 +213,91 @@ pub fn install_skill_interactive(install_path: &str) -> std::io::Result<()> {
     println!("\x1b[36m┃\x1b[0m  🔌 Preparando instalación de Skill: \x1b[1;33m{:<14}\x1b[0m \x1b[36m┃\x1b[0m", install_path);
     println!("\x1b[36m┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛\x1b[0m\n");
 
-    // Ejecutar npx skills add conectando stdin/stdout directamente al terminal del usuario
-    let mut child = Command::new("npx")
-        .args(["skills", "add", install_path])
-        .spawn()?;
+    // Obtener el comando de instalación desde la página de la skill
+    let install_cmd = match get_install_command(install_path) {
+        Ok(cmd) => {
+            println!("Comando encontrado: {}\n", cmd);
+            cmd
+        }
+        Err(e) => {
+            eprintln!("No se pudo obtener comando automáticamente: {}", e);
+            // Intentar formato por defecto como fallback
+            let parts: Vec<&str> = install_path.split('/').collect();
+            if parts.len() < 3 {
+                eprintln!("Formato de skill inválido: {}", install_path);
+                return Ok(());
+            }
+            format!(
+                "npx skills add https://github.com/{}/{} --skill {}",
+                parts[0], parts[1], parts[2]
+            )
+        }
+    };
 
-    let status = child.wait()?;
+    // Extraer los argumentos del comando
+    // El comando puede ser: npx skills add https://github.com/author/repo --skill name
+    // o: npx skills add author@repo --skill name
+    let args: Vec<&str> = install_cmd.split_whitespace().collect();
 
-    if status.success() {
+    // Reconstruir argumentos
+    let mut final_args = vec!["skills", "add"];
+    let mut skip_next = false;
+    let mut has_skill = false;
+
+    for (i, arg) in args.iter().enumerate() {
+        if skip_next {
+            skip_next = false;
+            continue;
+        }
+        if *arg == "add" {
+            continue;
+        }
+        if *arg == "skills" {
+            continue;
+        }
+        if *arg == "npx" {
+            continue;
+        }
+
+        // Para --skill, incluir el valor siguiente
+        if *arg == "--skill" {
+            final_args.push(arg);
+            has_skill = true;
+            // Agregar el siguiente argumento (el nombre de la skill)
+            if i + 1 < args.len() {
+                let next = args[i + 1];
+                if !next.starts_with("--") && !next.is_empty() {
+                    final_args.push(next);
+                    skip_next = true;
+                }
+            }
+        } else if arg.starts_with("http") || arg.contains('@') {
+            final_args.push(arg);
+        } else if arg.starts_with("--") {
+            final_args.push(arg);
+        }
+    }
+
+    // Si tiene --skill, también agregar -y para saltarse la selección de skills
+    // pero mantener el selector de agentes
+    if has_skill {
+        final_args.push("-y");
+    }
+
+    println!("Ejecutando: npx {}\n", final_args.join(" "));
+
+    // Ejecutar el comando
+    let output = Command::new("npx").args(&final_args).output()?;
+
+    // Mostrar output del comando
+    if !output.stdout.is_empty() {
+        println!("{}", String::from_utf8_lossy(&output.stdout));
+    }
+    if !output.stderr.is_empty() {
+        eprintln!("{}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    if output.status.success() {
         println!("\n\x1b[32m✅ Instalación finalizada con éxito.\x1b[0m");
     } else {
         println!("\n\x1b[31m❌ El comando falló o fue cancelado.\x1b[0m");

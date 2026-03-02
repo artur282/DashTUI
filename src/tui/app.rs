@@ -149,10 +149,10 @@ impl App {
 
         // Inicializar base de datos y cargar datos persistidos
         match Storage::new() {
-            Ok(ref mut storage) => {
+            Ok(storage) => {
                 app.tasks = storage.list_tasks().unwrap_or_default();
                 app.snippets = storage.list_snippets(None).unwrap_or_default();
-                app.storage = Storage::new().ok();
+                app.storage = Some(storage);
             }
             Err(e) => eprintln!("Error inicializando DB local: {}", e),
         }
@@ -216,7 +216,7 @@ impl App {
                 self.pomodoros_completed += 1;
                 match self.pomodoro {
                     PomodoroState::Work => {
-                        if self.pomodoros_completed % 4 == 0 {
+                        if self.pomodoros_completed.is_multiple_of(4) {
                             self.pomodoro = PomodoroState::LongBreak;
                             self.pomodoro_timer = Duration::from_secs(15 * 60);
                         } else {
@@ -388,9 +388,9 @@ impl App {
             if storage
                 .add_snippet(
                     &self.new_snippet_draft.0,
+                    &code,
                     &self.new_snippet_draft.1,
                     &self.new_snippet_draft.2,
-                    &code,
                 )
                 .is_ok()
             {
@@ -427,10 +427,7 @@ impl App {
             // Sin query: cargar todas las skills del leaderboard
             match crate::commands::skills::fetch_all_skills() {
                 Ok(skills) => {
-                    self.skills_status = Some(format!(
-                        "✅ {} skills encontradas",
-                        skills.len()
-                    ));
+                    self.skills_status = Some(format!("✅ {} skills encontradas", skills.len()));
                     self.skills_results = skills;
                     self.selected_skill_index = 0;
                 }
@@ -443,11 +440,15 @@ impl App {
             // Con query: buscar y filtrar
             match crate::commands::skills::search_skills(&query) {
                 Ok(skills) => {
-                    self.skills_status = Some(format!(
-                        "✅ {} skills encontradas para '{}'",
-                        skills.len(),
-                        query
-                    ));
+                    if skills.is_empty() {
+                        self.skills_status = Some(format!(
+                            "❓ 0 skills para '{}'. Presiona 'l' para leaderboard",
+                            query
+                        ));
+                    } else {
+                        self.skills_status =
+                            Some(format!("✅ {} skills para '{}'", skills.len(), query));
+                    }
                     self.skills_results = skills;
                     self.selected_skill_index = 0;
                 }
@@ -461,5 +462,4 @@ impl App {
         self.skills_loading = false;
         self.exit_input_mode();
     }
-
 }

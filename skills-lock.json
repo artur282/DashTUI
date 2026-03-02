@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "brainstorming": {
+      "source": "obra/superpowers",
+      "sourceType": "github",
+      "computedHash": "5cafa1558b0b6bd4d4c71f23d5567b7fcbbcdb4b0a50b0c5f69a80a3cebaf9b8"
+    },
     "rust-best-practices": {
       "source": "apollographql/skills",
       "sourceType": "github",
@@ -10,11 +15,6 @@
       "source": "jeffallan/claude-skills",
       "sourceType": "github",
       "computedHash": "d88f327bdb51590405f90c0e440ab6a7ccbba6f41eae3525196455b3ecbc250d"
-    },
-    "token-efficient-coder": {
-      "source": "artur282/Token-Efficient-Coder",
-      "sourceType": "github",
-      "computedHash": "d45bc5df0e8a87e2189aa9f06e4133393ec2afaae81cc1319a097f44f1806a2f"
     }
   }
 }
